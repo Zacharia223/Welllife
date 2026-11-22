@@ -80,11 +80,14 @@ private fun WellLifeApp() {
             database.wellnessGoalDao()
         )
     }
+
     val activity = context as ComponentActivity
     val viewModel = remember(activity, repository) {
-        ViewModelProvider(activity, DashboardViewModelFactory(repository))[DashboardViewModel::class.java]
+        ViewModelProvider(
+            activity,
+            DashboardViewModelFactory(repository)
+        )[DashboardViewModel::class.java]
     }
-
     val uiState by viewModel.uiState.collectAsState()
 
     BackHandler(enabled = selectedScreen != null) {
@@ -109,16 +112,16 @@ private fun WellLifeApp() {
             .padding(innerPadding)
             .fillMaxSize()
 
-        if (selectedScreen == null) {
-            DashboardScreen(
+        when (selectedScreen) {
+            null -> DashboardScreen(
                 modifier = contentModifier,
                 uiState = uiState,
-                onOpenScreen = { screen ->
-                    selectedScreenName = screen.name
-                }
+                onOpenScreen = { screen -> selectedScreenName = screen.name }
             )
-        } else {
-            FeatureScreen(selectedScreen, contentModifier)
+
+            Screen.SLEEP -> SleepScreen(modifier = contentModifier)
+
+            else -> FeatureScreen(selectedScreen, contentModifier)
         }
     }
 }
@@ -151,6 +154,7 @@ private fun DashboardScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is DashboardUiState.Error -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -165,8 +169,10 @@ private fun DashboardScreen(
                     )
                 }
             }
+
             is DashboardUiState.Success -> {
                 val data = uiState.data
+
                 Screen.entries.forEach { screen ->
                     Card(
                         onClick = { onOpenScreen(screen) },
