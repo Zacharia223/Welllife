@@ -1,3 +1,4 @@
+
 package com.example.welllife
 
 import android.os.Bundle
@@ -33,15 +34,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.welllife.data.WellLifeDatabase
 import com.example.welllife.data.repository.DashboardRepositoryImpl
 import com.example.welllife.ui.dashboard.DashboardUiState
 import com.example.welllife.ui.dashboard.DashboardViewModel
 import com.example.welllife.ui.dashboard.DashboardViewModelFactory
+import com.example.welllife.ui.hydration.HydrationScreen
+import com.example.welllife.ui.hydration.HydrationViewModel
 import com.example.welllife.ui.theme.WelllifeTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -54,7 +59,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen(val title: String, val description: String) {
+private enum class Screen(
+    val title: String,
+    val description: String
+) {
     HYDRATION("Hydration", "Log and review your water intake"),
     SLEEP("Sleep", "Review your sleep duration and history"),
     ACTIVITY("Physical activity", "Log exercise and review daily minutes"),
@@ -65,13 +73,21 @@ private enum class Screen(val title: String, val description: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WellLifeApp() {
+
     var selectedScreenName by rememberSaveable {
         mutableStateOf<String?>(null)
     }
-    val selectedScreen = selectedScreenName?.let { Screen.valueOf(it) }
+
+    val selectedScreen = selectedScreenName?.let {
+        Screen.valueOf(it)
+    }
 
     val context = LocalContext.current
-    val database = remember(context) { WellLifeDatabase.getDatabase(context) }
+
+    val database = remember(context) {
+        WellLifeDatabase.getDatabase(context)
+    }
+
     val repository = remember(database) {
         DashboardRepositoryImpl(
             database.waterDao(),
@@ -80,9 +96,42 @@ private fun WellLifeApp() {
             database.wellnessGoalDao()
         )
     }
+
     val activity = context as ComponentActivity
+
     val viewModel = remember(activity, repository) {
-        ViewModelProvider(activity, DashboardViewModelFactory(repository))[DashboardViewModel::class.java]
+        ViewModelProvider(
+            activity,
+            DashboardViewModelFactory(repository)
+        )[DashboardViewModel::class.java]
+    }
+
+    // Create HydrationViewModel with both required DAOs
+    val hydrationViewModel = remember(activity, database) {
+        ViewModelProvider(
+            activity,
+            object : ViewModelProvider.Factory {
+
+                override fun <T : ViewModel> create(
+                    modelClass: Class<T>
+                ): T {
+                    if (modelClass.isAssignableFrom(
+                            HydrationViewModel::class.java
+                        )
+                    ) {
+                        @Suppress("UNCHECKED_CAST")
+                        return HydrationViewModel(
+                            database.waterDao(),
+                            database.wellnessGoalDao()
+                        ) as T
+                    }
+
+                    throw IllegalArgumentException(
+                        "Unknown ViewModel class"
+                    )
+                }
+            }
+        )[HydrationViewModel::class.java]
     }
 
     val uiState by viewModel.uiState.collectAsState()
@@ -94,10 +143,16 @@ private fun WellLifeApp() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(selectedScreen?.title ?: "WellLife") },
+                title = {
+                    Text(selectedScreen?.title ?: "WellLife")
+                },
                 navigationIcon = {
                     if (selectedScreen != null) {
-                        TextButton(onClick = { selectedScreenName = null }) {
+                        TextButton(
+                            onClick = {
+                                selectedScreenName = null
+                            }
+                        ) {
                             Text("Back")
                         }
                     }
@@ -105,11 +160,13 @@ private fun WellLifeApp() {
             )
         }
     ) { innerPadding ->
+
         val contentModifier = Modifier
             .padding(innerPadding)
             .fillMaxSize()
 
         if (selectedScreen == null) {
+
             DashboardScreen(
                 modifier = contentModifier,
                 uiState = uiState,
@@ -117,8 +174,20 @@ private fun WellLifeApp() {
                     selectedScreenName = screen.name
                 }
             )
+
+        } else if (selectedScreen == Screen.HYDRATION) {
+
+            HydrationScreen(
+                viewModel = hydrationViewModel,
+                modifier = contentModifier
+            )
+
         } else {
-            FeatureScreen(selectedScreen, contentModifier)
+
+            FeatureScreen(
+                screen = selectedScreen,
+                modifier = contentModifier
+            )
         }
     }
 }
@@ -129,19 +198,23 @@ private fun DashboardScreen(
     uiState: DashboardUiState,
     onOpenScreen: (Screen) -> Unit
 ) {
+
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+
         Text(
             text = "Your wellness overview",
             style = MaterialTheme.typography.headlineSmall
         )
 
         when (uiState) {
+
             is DashboardUiState.Loading -> {
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -151,11 +224,14 @@ private fun DashboardScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is DashboardUiState.Error -> {
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
+                        containerColor =
+                            MaterialTheme.colorScheme.errorContainer
                     )
                 ) {
                     Text(
@@ -165,17 +241,25 @@ private fun DashboardScreen(
                     )
                 }
             }
+
             is DashboardUiState.Success -> {
+
                 val data = uiState.data
+
                 Screen.entries.forEach { screen ->
+
                     Card(
-                        onClick = { onOpenScreen(screen) },
+                        onClick = {
+                            onOpenScreen(screen)
+                        },
                         modifier = Modifier.fillMaxWidth()
                     ) {
+
                         Column(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+
                             Text(
                                 text = screen.title,
                                 style = MaterialTheme.typography.titleMedium
@@ -186,7 +270,8 @@ private fun DashboardScreen(
                                 Screen.SLEEP -> data.sleepSummary
                                 Screen.ACTIVITY -> data.activitySummary
                                 Screen.GOALS -> data.goalsSummary
-                                Screen.HISTORY -> "Tracked activity & trend summary"
+                                Screen.HISTORY ->
+                                    "Tracked activity & trend summary"
                             }
 
                             Text(
@@ -209,15 +294,21 @@ private fun DashboardScreen(
 }
 
 @Composable
-private fun FeatureScreen(screen: Screen, modifier: Modifier) {
+private fun FeatureScreen(
+    screen: Screen,
+    modifier: Modifier
+) {
+
     Column(
         modifier = modifier.padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+
         Text(
             text = screen.description,
             style = MaterialTheme.typography.titleLarge
         )
+
         Text("This feature is being built.")
     }
 }
