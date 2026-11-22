@@ -9,6 +9,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.Instant
+
+data class DailyProgress(
+    val date: LocalDate,
+    val waterMl: Int,
+    val sleepMinutes: Int?,
+    val activityMinutes: Int
+)
 
 data class GoalProgress(
     val goal: WellnessGoal,
@@ -26,7 +34,8 @@ data class DashboardData(
     val todayWaterMl: Int = 0,
     val todayActivityMinutes: Int = 0,
     val latestSleepDurationMinutes: Int? = null,
-    val goals: List<WellnessGoal> = emptyList()
+    val goals: List<WellnessGoal> = emptyList(),
+    val sevenDayProgress: List<DailyProgress> = emptyList()
 ) {
     val waterSummary: String
         get() = "$todayWaterMl mL today"
@@ -64,6 +73,9 @@ data class DashboardData(
 
 interface DashboardRepository {
     fun getDashboardData(): Flow<DashboardData>
+    suspend fun saveGoal(goal: WellnessGoal): Long
+    suspend fun updateGoal(goal: WellnessGoal)
+    suspend fun deleteGoal(goal: WellnessGoal)
 }
 
 class DashboardRepositoryImpl(
@@ -94,12 +106,34 @@ class DashboardRepositoryImpl(
 
             val latestSleep = sleepEntries.maxByOrNull { it.timestamp }?.durationMinutes
 
+            val sevenDayDates = (0L..6L).map { now.minusDays(it) }.reversed()
+            val sevenDayProgress = sevenDayDates.map { date ->
+                val dayEntries = { timestamp: Long ->
+                    Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate() == date
+                }
+                DailyProgress(
+                    date = date,
+                    waterMl = waterEntries.filter { dayEntries(it.timestamp) }.sumOf { it.amountMl },
+                    sleepMinutes = sleepEntries.filter { dayEntries(it.timestamp) }
+                        .maxByOrNull { it.timestamp }?.durationMinutes,
+                    activityMinutes = activityEntries.filter { dayEntries(it.timestamp) }
+                        .sumOf { it.durationMinutes }
+                )
+            }
+
             DashboardData(
                 todayWaterMl = todayWater,
                 todayActivityMinutes = todayActivity,
                 latestSleepDurationMinutes = latestSleep,
-                goals = goals
+                goals = goals,
+                sevenDayProgress = sevenDayProgress
             )
         }
     }
+
+    override suspend fun saveGoal(goal: WellnessGoal): Long = wellnessGoalDao.insertGoal(goal)
+
+    override suspend fun updateGoal(goal: WellnessGoal) = wellnessGoalDao.updateGoal(goal)
+
+    override suspend fun deleteGoal(goal: WellnessGoal) = wellnessGoalDao.deleteGoal(goal)
 }

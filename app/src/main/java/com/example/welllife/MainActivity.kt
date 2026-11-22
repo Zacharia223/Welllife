@@ -39,6 +39,8 @@ import com.example.welllife.data.repository.DashboardRepositoryImpl
 import com.example.welllife.ui.dashboard.DashboardUiState
 import com.example.welllife.ui.dashboard.DashboardViewModel
 import com.example.welllife.ui.dashboard.DashboardViewModelFactory
+import com.example.welllife.ui.goals.GoalsScreen
+import com.example.welllife.ui.progress.ProgressScreen
 import com.example.welllife.ui.theme.WelllifeTheme
 
 class MainActivity : ComponentActivity() {
@@ -118,7 +120,12 @@ private fun WellLifeApp() {
                 }
             )
         } else {
-            FeatureScreen(selectedScreen, contentModifier)
+            FeatureScreen(
+                screen = selectedScreen,
+                modifier = contentModifier,
+                uiState = uiState,
+                repository = repository
+            )
         }
     }
 }
@@ -209,15 +216,35 @@ private fun DashboardScreen(
 }
 
 @Composable
-private fun FeatureScreen(screen: Screen, modifier: Modifier) {
-    Column(
-        modifier = modifier.padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = screen.description,
-            style = MaterialTheme.typography.titleLarge
-        )
-        Text("This feature is being built.")
+private fun FeatureScreen(
+    screen: Screen,
+    modifier: Modifier,
+    uiState: DashboardUiState,
+    repository: com.example.welllife.data.repository.DashboardRepository
+) {
+    when (screen) {
+        Screen.GOALS -> {
+            val data = (uiState as? DashboardUiState.Success)?.data
+            if (data == null) {
+                Box(modifier, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            } else {
+                GoalsScreen(data.goals, repository, modifier)
+            }
+        }
+        Screen.HISTORY -> {
+            val data = (uiState as? DashboardUiState.Success)?.data
+            if (data == null) {
+                Box(modifier, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            } else {
+                ProgressScreen(data.sevenDayProgress, modifier)
+            }
+        }
+        else -> Column(
+            modifier = modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(screen.description, style = MaterialTheme.typography.titleLarge)
+            Text("This feature is being built.")
+        }
     }
 }
