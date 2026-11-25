@@ -38,6 +38,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.welllife.data.WellLifeDatabase
 import com.example.welllife.data.repository.DashboardRepositoryImpl
+import com.example.welllife.ui.activity.ActivityScreen
+import com.example.welllife.ui.activity.ActivityViewModel
+import com.example.welllife.ui.activity.ActivityViewModelFactory
 import com.example.welllife.ui.dashboard.DashboardUiState
 import com.example.welllife.ui.dashboard.DashboardViewModel
 import com.example.welllife.ui.dashboard.DashboardViewModelFactory
@@ -183,11 +186,7 @@ private fun WellLifeApp() {
             )
 
         } else {
-
-            FeatureScreen(
-                screen = selectedScreen,
-                modifier = contentModifier
-            )
+            FeatureScreen(selectedScreen, contentModifier, database, activity)
         }
     }
 }
@@ -296,19 +295,28 @@ private fun DashboardScreen(
 @Composable
 private fun FeatureScreen(
     screen: Screen,
-    modifier: Modifier
+    modifier: Modifier,
+    database: WellLifeDatabase,
+    activity: ComponentActivity
 ) {
-
-    Column(
-        modifier = modifier.padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-
-        Text(
-            text = screen.description,
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        Text("This feature is being built.")
+    when (screen) {
+        Screen.ACTIVITY -> {
+            val viewModel = remember(activity, database) {
+                ViewModelProvider(activity, ActivityViewModelFactory(database.activityDao()))[ActivityViewModel::class.java]
+            }
+            ActivityScreen(viewModel = viewModel, modifier = modifier)
+        }
+        else -> {
+            Column(
+                modifier = modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = screen.description,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text("This feature is being built.")
+            }
+        }
     }
 }
