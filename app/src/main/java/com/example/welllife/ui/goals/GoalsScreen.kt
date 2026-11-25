@@ -108,22 +108,34 @@ fun GoalsScreen(goals: List<WellnessGoal>, repository: DashboardRepository, modi
             errorMessage = editorError,
             onDismiss = { showEditor = false; editorError = null },
             onSave = { goal ->
+                val normalizedType = when (goal.goalType.trim().uppercase()) {
+                    "WATER", "HYDRATION" -> "WATER"
+                    "ACTIVITY", "PHYSICAL ACTIVITY" -> "ACTIVITY"
+                    "SLEEP" -> "SLEEP"
+                    else -> goal.goalType.trim()
+                }
+                val normalizedGoal = goal.copy(goalType = normalizedType)
                 val duplicateType = goals.any {
-                    it.id != goal.id && it.goalType.equals(goal.goalType, ignoreCase = true)
+                    it.id != normalizedGoal.id && it.goalType.equals(normalizedGoal.goalType, ignoreCase = true)
                 }
                 if (duplicateType) {
-                    editorError = "A goal for ${goal.goalType} already exists."
+                    editorError = "A goal for ${normalizedGoal.goalType} already exists."
                 } else {
                     scope.launch {
-                        if (editingGoal != null && editingGoal!!.goalType != goal.goalType &&
-                            GoalReminderPreferences.isEnabled(context, editingGoal!!.goalType)
-                        ) {
-                            GoalReminderPreferences.setEnabled(context, editingGoal!!.goalType, false)
-                            GoalReminderScheduler.cancel(context, editingGoal!!.goalType)
+                        val previousGoal = editingGoal
+                        val reminderWasEnabled = previousGoal?.let {
+                            GoalReminderPreferences.isEnabled(context, it.goalType)
+                        } == true
+                        if (previousGoal != null && previousGoal.goalType != normalizedGoal.goalType) {
+                            GoalReminderPreferences.setEnabled(context, previousGoal.goalType, false)
+                            GoalReminderScheduler.cancel(context, previousGoal.goalType)
                         }
-                        if (goal.id == 0L) repository.saveGoal(goal) else repository.updateGoal(goal)
-                        if (GoalReminderPreferences.isEnabled(context, goal.goalType)) {
-                            GoalReminderScheduler.schedule(context, goal.goalType, goal.targetValue, goal.unit)
+                        if (normalizedGoal.id == 0L) repository.saveGoal(normalizedGoal) else repository.updateGoal(normalizedGoal)
+                        if (reminderWasEnabled) {
+                            GoalReminderPreferences.setEnabled(context, normalizedGoal.goalType, true)
+                        }
+                        if (reminderWasEnabled || GoalReminderPreferences.isEnabled(context, normalizedGoal.goalType)) {
+                            GoalReminderScheduler.schedule(context, normalizedGoal.goalType, normalizedGoal.targetValue, normalizedGoal.unit)
                         }
                         showEditor = false
                     }

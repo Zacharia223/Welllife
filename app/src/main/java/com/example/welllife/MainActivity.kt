@@ -169,8 +169,6 @@ private fun WellLifeApp() {
             .padding(innerPadding)
             .fillMaxSize()
 
-        when (selectedScreen) {
-            null -> DashboardScreen(
         if (selectedScreen == null) {
 
             DashboardScreen(
@@ -179,9 +177,6 @@ private fun WellLifeApp() {
                 onOpenScreen = { screen -> selectedScreenName = screen.name }
             )
 
-            Screen.SLEEP -> SleepScreen(modifier = contentModifier)
-
-            else -> FeatureScreen(selectedScreen, contentModifier)
         } else if (selectedScreen == Screen.HYDRATION) {
 
             HydrationScreen(
@@ -322,6 +317,7 @@ private fun FeatureScreen(
             }
             ActivityScreen(viewModel = activityViewModel, modifier = modifier)
         }
+        Screen.SLEEP -> SleepScreen(modifier)
         Screen.GOALS -> {
             val data = (uiState as? DashboardUiState.Success)?.data
             if (data == null) {
