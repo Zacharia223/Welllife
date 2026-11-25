@@ -136,7 +136,6 @@ private fun WellLifeApp() {
             }
         )[HydrationViewModel::class.java]
     }
-
     val uiState by viewModel.uiState.collectAsState()
 
     BackHandler(enabled = selectedScreen != null) {
@@ -168,16 +167,19 @@ private fun WellLifeApp() {
             .padding(innerPadding)
             .fillMaxSize()
 
+        when (selectedScreen) {
+            null -> DashboardScreen(
         if (selectedScreen == null) {
 
             DashboardScreen(
                 modifier = contentModifier,
                 uiState = uiState,
-                onOpenScreen = { screen ->
-                    selectedScreenName = screen.name
-                }
+                onOpenScreen = { screen -> selectedScreenName = screen.name }
             )
 
+            Screen.SLEEP -> SleepScreen(modifier = contentModifier)
+
+            else -> FeatureScreen(selectedScreen, contentModifier)
         } else if (selectedScreen == Screen.HYDRATION) {
 
             HydrationScreen(
