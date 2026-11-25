@@ -38,6 +38,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.welllife.data.WellLifeDatabase
 import com.example.welllife.data.repository.DashboardRepositoryImpl
+import com.example.welllife.ui.activity.ActivityScreen
+import com.example.welllife.ui.activity.ActivityViewModel
+import com.example.welllife.ui.activity.ActivityViewModelFactory
 import com.example.welllife.ui.dashboard.DashboardUiState
 import com.example.welllife.ui.dashboard.DashboardViewModel
 import com.example.welllife.ui.dashboard.DashboardViewModelFactory
@@ -189,7 +192,9 @@ private fun WellLifeApp() {
                 screen = selectedScreen,
                 modifier = contentModifier,
                 uiState = uiState,
-                repository = repository
+                repository = repository,
+                database = database,
+                activity = activity
             )
         }
     }
@@ -301,9 +306,20 @@ private fun FeatureScreen(
     screen: Screen,
     modifier: Modifier,
     uiState: DashboardUiState,
-    repository: com.example.welllife.data.repository.DashboardRepository
+    repository: com.example.welllife.data.repository.DashboardRepository,
+    database: WellLifeDatabase,
+    activity: ComponentActivity
 ) {
     when (screen) {
+        Screen.ACTIVITY -> {
+            val activityViewModel = remember(activity, database) {
+                ViewModelProvider(
+                    activity,
+                    ActivityViewModelFactory(database.activityDao())
+                )[ActivityViewModel::class.java]
+            }
+            ActivityScreen(viewModel = activityViewModel, modifier = modifier)
+        }
         Screen.GOALS -> {
             val data = (uiState as? DashboardUiState.Success)?.data
             if (data == null) {
