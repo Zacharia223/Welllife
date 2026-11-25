@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.LocalDate
+import java.time.ZoneId
 
 class FakeWaterDao : WaterDao {
     private val entries = MutableStateFlow<List<WaterEntry>>(emptyList())
@@ -94,6 +96,8 @@ class DashboardTest {
         assertEquals("0 mL today", initialData.waterSummary)
         assertEquals("No sleep recorded", initialData.sleepSummary)
         assertEquals("0 min today", initialData.activitySummary)
+        assertEquals(7, initialData.sevenDayProgress.size)
+        assertEquals(null, initialData.sevenDayProgress.last().sleepMinutes)
 
         // 2. Add temporary 250 mL water entry dated today
         val entry = WaterEntry(amountMl = 250, timestamp = System.currentTimeMillis())
@@ -109,5 +113,14 @@ class DashboardTest {
         val resetData = repository.getDashboardData().first()
         assertEquals(0, resetData.todayWaterMl)
         assertEquals("0 mL today", resetData.waterSummary)
+
+        sleepDao.insertSleepEntry(
+            SleepEntry(
+                durationMinutes = 0,
+                timestamp = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            )
+        )
+        val zeroSleepData = repository.getDashboardData().first()
+        assertEquals(0, zeroSleepData.sevenDayProgress.last().sleepMinutes)
     }
 }

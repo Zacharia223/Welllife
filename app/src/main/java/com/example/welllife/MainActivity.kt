@@ -44,6 +44,8 @@ import com.example.welllife.ui.activity.ActivityViewModelFactory
 import com.example.welllife.ui.dashboard.DashboardUiState
 import com.example.welllife.ui.dashboard.DashboardViewModel
 import com.example.welllife.ui.dashboard.DashboardViewModelFactory
+import com.example.welllife.ui.goals.GoalsScreen
+import com.example.welllife.ui.progress.ProgressScreen
 import com.example.welllife.ui.hydration.HydrationScreen
 import com.example.welllife.ui.hydration.HydrationViewModel
 import com.example.welllife.ui.theme.WelllifeTheme
@@ -188,7 +190,14 @@ private fun WellLifeApp() {
             )
 
         } else {
-            FeatureScreen(selectedScreen, contentModifier, database, activity)
+            FeatureScreen(
+                screen = selectedScreen,
+                modifier = contentModifier,
+                uiState = uiState,
+                repository = repository,
+                database = database,
+                activity = activity
+            )
         }
     }
 }
@@ -298,27 +307,43 @@ private fun DashboardScreen(
 private fun FeatureScreen(
     screen: Screen,
     modifier: Modifier,
+    uiState: DashboardUiState,
+    repository: com.example.welllife.data.repository.DashboardRepository,
     database: WellLifeDatabase,
     activity: ComponentActivity
 ) {
     when (screen) {
         Screen.ACTIVITY -> {
-            val viewModel = remember(activity, database) {
-                ViewModelProvider(activity, ActivityViewModelFactory(database.activityDao()))[ActivityViewModel::class.java]
+            val activityViewModel = remember(activity, database) {
+                ViewModelProvider(
+                    activity,
+                    ActivityViewModelFactory(database.activityDao())
+                )[ActivityViewModel::class.java]
             }
-            ActivityScreen(viewModel = viewModel, modifier = modifier)
+            ActivityScreen(viewModel = activityViewModel, modifier = modifier)
         }
-        else -> {
-            Column(
-                modifier = modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = screen.description,
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Text("This feature is being built.")
+        Screen.GOALS -> {
+            val data = (uiState as? DashboardUiState.Success)?.data
+            if (data == null) {
+                Box(modifier, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            } else {
+                GoalsScreen(data.goals, repository, modifier)
             }
+        }
+        Screen.HISTORY -> {
+            val data = (uiState as? DashboardUiState.Success)?.data
+            if (data == null) {
+                Box(modifier, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            } else {
+                ProgressScreen(data.sevenDayProgress, modifier)
+            }
+        }
+        else -> Column(
+            modifier = modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(screen.description, style = MaterialTheme.typography.titleLarge)
+            Text("This feature is being built.")
         }
     }
 }
