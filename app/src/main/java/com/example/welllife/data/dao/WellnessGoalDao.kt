@@ -14,7 +14,7 @@ interface WellnessGoalDao {
     @Query("SELECT * FROM wellness_goals")
     fun getAllGoals(): Flow<List<WellnessGoal>>
 
-    @Query("SELECT * FROM wellness_goals WHERE goalType = :goalType LIMIT 1")
+    @Query("SELECT * FROM wellness_goals WHERE UPPER(goalType) = UPPER(:goalType) LIMIT 1")
     fun getGoalByType(goalType: String): Flow<WellnessGoal?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
